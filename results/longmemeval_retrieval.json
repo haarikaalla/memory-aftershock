@@ -1,0 +1,66 @@
+{
+  "by_question_type": {
+    "knowledge-update": {
+      "full_evidence@1": 0.0,
+      "full_evidence@3": 0.8333333333333334,
+      "full_evidence@5": 0.8888888888888888,
+      "hit@1": 0.8611111111111112,
+      "hit@3": 0.9861111111111112,
+      "hit@5": 1.0,
+      "questions": 72
+    },
+    "multi-session": {
+      "full_evidence@1": 0.0,
+      "full_evidence@3": 0.45454545454545453,
+      "full_evidence@5": 0.5950413223140496,
+      "hit@1": 0.768595041322314,
+      "hit@3": 0.9256198347107438,
+      "hit@5": 0.9338842975206612,
+      "questions": 121
+    },
+    "single-session-assistant": {
+      "full_evidence@1": 0.7321428571428571,
+      "full_evidence@3": 0.8392857142857143,
+      "full_evidence@5": 0.9107142857142857,
+      "hit@1": 0.7321428571428571,
+      "hit@3": 0.8392857142857143,
+      "hit@5": 0.9107142857142857,
+      "questions": 56
+    },
+    "single-session-preference": {
+      "full_evidence@1": 0.36666666666666664,
+      "full_evidence@3": 0.7,
+      "full_evidence@5": 0.8333333333333334,
+      "hit@1": 0.36666666666666664,
+      "hit@3": 0.7,
+      "hit@5": 0.8333333333333334,
+      "questions": 30
+    },
+    "single-session-user": {
+      "full_evidence@1": 0.640625,
+      "full_evidence@3": 0.890625,
+      "full_evidence@5": 0.96875,
+      "hit@1": 0.640625,
+      "hit@3": 0.890625,
+      "hit@5": 0.96875,
+      "questions": 64
+    },
+    "temporal-reasoning": {
+      "full_evidence@1": 0.08661417322834646,
+      "full_evidence@3": 0.5984251968503937,
+      "full_evidence@5": 0.7322834645669292,
+      "hit@1": 0.7480314960629921,
+      "hit@3": 0.905511811023622,
+      "hit@5": 0.937007874015748,
+      "questions": 127
+    }
+  },
+  "dataset_sha256": "d6f21ea9d60a0d56f34a05b609c79c88a451d2ae03597821ea3d5a9678c3a442",
+  "full_evidence@1": 0.22127659574468084,
+  "full_evidence@3": 0.6723404255319149,
+  "full_evidence@5": 0.7808510638297872,
+  "hit@1": 0.7297872340425532,
+  "hit@3": 0.9,
+  "hit@5": 0.9404255319148936,
+  "questions": 470
+}

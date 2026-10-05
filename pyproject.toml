@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "memory-aftershock"
+version = "0.1.0"
+description = "End-to-end agent memory repair benchmark with LongMemEval retrieval and budgeted downstream correction."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [{ name = "Haarika Alla" }]
+dependencies = [
+  "fastapi>=0.115,<1",
+  "numpy>=1.26,<3",
+  "scikit-learn>=1.4,<2",
+  "uvicorn>=0.30,<1",
+]
+
+[project.optional-dependencies]
+dev = ["httpx>=0.28,<1", "pytest>=8,<10", "ruff>=0.8,<1"]
+
+[project.scripts]
+aftershock = "aftershock.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+aftershock = ["py.typed"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
