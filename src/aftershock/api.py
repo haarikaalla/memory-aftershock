@@ -55,6 +55,36 @@ def memories() -> list[dict]:
     return [memory.__dict__ for memory in STORE.all_latest()]
 
 
+@app.get("/graph")
+def graph() -> dict:
+    memories = STORE.all_latest()
+    return {
+        "nodes": [
+            {
+                "id": memory.memory_id,
+                "label": memory.text,
+                "status": memory.status,
+                "kind": memory.kind,
+                "timestamp": memory.timestamp,
+            }
+            for memory in memories
+        ],
+        "edges": [{"source": parent, "target": child} for parent, child in STORE.edges()],
+        "events": STORE.events()[-8:],
+    }
+
+
+@app.get("/plan/{root_id}")
+def plan(root_id: str, strategy: str = "recorded", budget: int = 3) -> dict:
+    candidates = RepairEngine(STORE).plan(root_id, strategy=strategy, budget=budget)
+    return {
+        "root_id": root_id,
+        "strategy": strategy,
+        "budget": budget,
+        "candidates": [candidate.__dict__ for candidate in candidates],
+    }
+
+
 @app.post("/ask")
 def ask(request: AskRequest) -> dict:
     answer = EvidenceAgent(STORE).answer(request.query)

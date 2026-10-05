@@ -7,7 +7,11 @@ import json
 from pathlib import Path
 
 from .datasets import download_longmemeval_s, sha256_file
-from .evaluation import evaluate_longmemeval_retrieval, evaluate_repair
+from .evaluation import (
+    evaluate_longmemeval_retrieval,
+    evaluate_repair,
+    evaluate_repair_budget_curve,
+)
 
 
 def main() -> None:
@@ -27,6 +31,12 @@ def main() -> None:
     repair.add_argument("--seed", type=int, default=13)
     repair.add_argument("--output", default="results/repair_benchmark.json")
 
+    curve = sub.add_parser("eval-budget-curve", help="Evaluate repair quality across budgets.")
+    curve.add_argument("--cases", type=int, default=160)
+    curve.add_argument("--budgets", default="1,2,3,4")
+    curve.add_argument("--seed", type=int, default=13)
+    curve.add_argument("--output", default="results/budget_curve.json")
+
     serve = sub.add_parser("serve", help="Run the demo API and dashboard.")
     serve.add_argument("--host", default="127.0.0.1")
     serve.add_argument("--port", type=int, default=8000)
@@ -41,6 +51,11 @@ def main() -> None:
         print(json.dumps(result, indent=2, sort_keys=True))
     elif args.command == "eval-repair":
         result = evaluate_repair(n_cases=args.cases, budget=args.budget, seed=args.seed)
+        _write_json(args.output, result)
+        print(json.dumps(result, indent=2, sort_keys=True))
+    elif args.command == "eval-budget-curve":
+        budgets = tuple(int(value.strip()) for value in args.budgets.split(",") if value.strip())
+        result = evaluate_repair_budget_curve(n_cases=args.cases, budgets=budgets, seed=args.seed)
         _write_json(args.output, result)
         print(json.dumps(result, indent=2, sort_keys=True))
     elif args.command == "serve":

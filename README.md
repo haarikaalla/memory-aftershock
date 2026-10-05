@@ -1,37 +1,88 @@
 # Memory Aftershock
 
-Memory Aftershock is an end-to-end research project for agent memory repair. It asks a practical frontier question: when an AI agent corrects one stored memory, how should it find and fix downstream memories that were built from the old fact?
+**Budgeted repair for long-term AI agent memories when one corrected fact can break everything downstream.**
 
-The project combines a real long-memory benchmark, a synthetic repair benchmark with hidden dependency truth, an append-only memory store, a learned dependency estimator, a budgeted repair engine, a transparent retrieval agent, tests, and a small dashboard.
+Memory Aftershock is a research-grade machine learning and agent systems project. It studies a failure mode that normal retrieval demos miss: an AI agent may update one user memory, but stale recommendations, plans, summaries, and tool decisions derived from the old memory can remain active. This repo treats that as an end-to-end benchmark and repair system.
 
-## Why this is different
+[![CI](https://github.com/haarikaalla/memory-aftershock/actions/workflows/ci.yml/badge.svg)](https://github.com/haarikaalla/memory-aftershock/actions/workflows/ci.yml)
 
-Most memory systems focus on retrieving the right old fact. Memory Aftershock focuses on the next failure: a wrong old fact can already have influenced recommendations, plans, and summaries. The repair engine ranks downstream memories to verify when explicit provenance is incomplete.
+## Core Idea
 
-## Data
+Most agent memory projects ask:
 
-The retrieval benchmark uses `xiaowu0162/longmemeval-cleaned`, pinned to revision `98d7416c24c778c2fee6e6f3006e7a073259d48f`. The raw dataset is not committed because it is about 277 MB.
+> Can the agent retrieve the right memory?
 
-```bash
-python -m venv .venv
-. .venv/bin/activate
-pip install -e ".[dev]"
-aftershock download-data --output data/raw/longmemeval_s_cleaned.json
+Memory Aftershock asks the harder follow-up:
+
+> After a memory is corrected, can the agent find and repair the hidden downstream memories that depended on the old version, under a limited verification budget?
+
+That makes the project closer to a real persistent-agent maintenance system than a generic retrieval app. It combines retrieval, provenance graphs, learned dependency prediction, budgeted repair planning, audit logging, a reproducible benchmark, and a working dashboard.
+
+## What This Project Builds
+
+| Layer | What is implemented |
+| --- | --- |
+| Real benchmark | Leakage-safe retrieval evaluation on `xiaowu0162/longmemeval-cleaned` |
+| Synthetic benchmark | Controlled aftershock cases with hidden dependency truth |
+| Memory system | Append-only SQLite memory store with revisions, statuses, dependency edges, and event logs |
+| Retrieval | BM25 over sessions and turns with reciprocal-rank fusion |
+| ML model | Logistic dependency estimator over text overlap, entity match, source match, and time gap features |
+| Repair algorithm | Budgeted planner that ranks downstream memories using recorded and inferred dependencies |
+| Agent demo | Transparent evidence agent with citations and tool trace |
+| API | FastAPI endpoints for asking, planning, repairing, graph inspection, and audit events |
+| UI | Dashboard for memory graph, retrieval trace, repair plan, and correction workflow |
+| Paper seed | LNCS-style research outline and abstract in `docs/lncs_paper_seed.md` |
+
+## Architecture
+
+```text
+LongMemEval-cleaned                 Synthetic aftershock cases
+        |                                      |
+        v                                      v
+Leakage-safe retriever          Hidden dependency ground truth
+        |                                      |
+        v                                      v
+Retrieval metrics               Dependency model training
+                                               |
+                                               v
+Append-only memory store -> Repair planner -> Verifier -> Audit log
+        |                         |
+        v                         v
+FastAPI endpoints            Budget-curve benchmark
+        |
+        v
+Interactive dashboard
 ```
 
-## Reproduce results
+## Repository Layout
 
-```bash
-aftershock eval-retrieval --dataset data/raw/longmemeval_s_cleaned.json
-aftershock eval-repair --cases 160 --budget 2 --seed 13
-pytest
+```text
+src/aftershock/
+  agent.py          Transparent memory agent with citations and trace
+  api.py            FastAPI backend and graph/repair endpoints
+  cli.py            Reproducible command line entry points
+  datasets.py       LongMemEval download, loading, and SHA-256 manifest
+  evaluation.py     Retrieval, repair, and budget-curve metrics
+  model.py          Learned missing-dependency estimator
+  repair.py         Budgeted repair planner and execution engine
+  retrieval.py      BM25 plus turn/session fusion
+  store.py          Append-only memory store with revisions and events
+  synthetic.py      Controlled aftershock benchmark generator
+  text.py           Tokenization and similarity utilities
+
+static/dashboard.html              Browser dashboard
+results/                           Measured benchmark outputs
+docs/lncs_paper_seed.md             Paper seed in LNCS style
+tests/                              Unit and API smoke tests
 ```
 
-## Measured results
+## Measured Results
 
-These numbers were produced by the code in this repository on the pinned LongMemEval-cleaned file and the controlled aftershock benchmark. Result JSON files are committed in `results/`.
+These metrics are generated by the code in this repository. The raw LongMemEval file is not committed because it is about 277 MB, but the dataset revision and hash are pinned for reproducibility.
 
-### LongMemEval-cleaned retrieval
+### LongMemEval-cleaned Retrieval
+
+The retrieval benchmark uses `xiaowu0162/longmemeval-cleaned`, revision `98d7416c24c778c2fee6e6f3006e7a073259d48f`.
 
 470 scored questions were evaluated. Abstention/no-answer cases are excluded from retrieval scoring.
 
@@ -44,11 +95,15 @@ These numbers were produced by the code in this repository on the pinned LongMem
 | full_evidence@3 | 0.6723 |
 | full_evidence@5 | 0.7809 |
 
-Dataset SHA-256: `d6f21ea9d60a0d56f34a05b609c79c88a451d2ae03597821ea3d5a9678c3a442`
+Dataset SHA-256:
 
-### Budgeted aftershock repair
+```text
+d6f21ea9d60a0d56f34a05b609c79c88a451d2ae03597821ea3d5a9678c3a442
+```
 
-The synthetic benchmark uses hidden dependency truth, incomplete recorded edges, and a verification budget of 2 downstream memories per correction.
+### Budgeted Aftershock Repair
+
+The repair benchmark uses hidden dependency truth, incomplete recorded provenance, and a verification budget of two downstream memories per corrected root.
 
 | Strategy | Precision | Recall | Correct memory preservation | Mean checked |
 | --- | ---: | ---: | ---: | ---: |
@@ -56,46 +111,98 @@ The synthetic benchmark uses hidden dependency truth, incomplete recorded edges,
 | learned dependency | 1.0000 | 1.0000 | 1.0000 | 2.0000 |
 | chronological sweep | 0.0000 | 0.0000 | 0.0000 | 2.0000 |
 
-The learned dependency model reached ROC-AUC `1.0000` and average precision `1.0000` on the controlled synthetic split. That should be read as a benchmark sanity result, not as a claim that real agent repair is solved.
+The learned model reaches ROC-AUC `1.0000` and average precision `1.0000` on the controlled synthetic split. This is a sanity result for the benchmark design, not a claim that real-world memory repair is solved.
 
-## Run the demo
+## Advanced Features
+
+- **Incomplete provenance repair:** the system handles missing dependency edges instead of assuming perfect traceability.
+- **Budget-aware planning:** repair is treated as a constrained verification problem, where every check has a cost.
+- **Explainable candidate ranking:** `/plan/{root_id}` returns risk-ranked downstream candidates with reasons.
+- **Graph inspection:** `/graph` exposes memory nodes, dependency edges, and recent audit events.
+- **Append-only correction history:** memory updates create new revisions instead of overwriting prior state.
+- **Leakage-safe retrieval:** LongMemEval answer labels are never fed into the retriever.
+- **Budget curve evaluation:** `eval-budget-curve` measures how strategies behave as verification budget changes.
+- **Paper-ready framing:** the repo includes an LNCS-style title, abstract, keywords, structure, and measured results.
+
+## Quickstart
+
+```bash
+python -m venv .venv
+. .venv/bin/activate
+pip install -e ".[dev]"
+pytest -q
+```
+
+## Reproduce the Data Benchmarks
+
+Download the pinned LongMemEval-cleaned file:
+
+```bash
+aftershock download-data --output data/raw/longmemeval_s_cleaned.json
+```
+
+Run retrieval, repair, and budget-curve evaluations:
+
+```bash
+aftershock eval-retrieval --dataset data/raw/longmemeval_s_cleaned.json
+aftershock eval-repair --cases 160 --budget 2 --seed 13
+aftershock eval-budget-curve --cases 160 --budgets 1,2,3,4 --seed 13
+```
+
+## Run the Demo
 
 ```bash
 aftershock serve --port 8000
 ```
 
-Open `http://127.0.0.1:8000`. The demo exposes the memory store, retrieval agent, and repair action.
+Open `http://127.0.0.1:8000`.
 
-## What is measured
+The dashboard lets you:
 
-- `hit@k`: at least one ground-truth source session appears in the top-k retrieved sessions.
-- `full_evidence@k`: every ground-truth source session appears in the top-k.
-- `repair_precision`: fraction of flagged downstream memories that truly depended on the corrupted root.
-- `repair_recall`: fraction of truly impacted downstream memories that were found under the verification budget.
-- `correct_memory_preservation`: fraction of unrelated memories left untouched.
+- ask the memory agent a question,
+- inspect citations and tool trace,
+- view the memory dependency graph,
+- explain the repair plan,
+- run a root correction,
+- inspect audit events after repair.
 
-## Project layout
+## API Surface
 
-```text
-src/aftershock/
-  retrieval.py      leakage-safe BM25 plus turn/session fusion
-  store.py          append-only SQLite memory store
-  model.py          learned dependency estimator
-  repair.py         budgeted repair engine
-  synthetic.py      controlled aftershock benchmark
-  evaluation.py     reproducible metrics
-  agent.py          transparent retrieval agent
-  api.py            FastAPI dashboard backend
-static/
-  dashboard.html
-tests/
-  focused unit tests
-```
+| Endpoint | Purpose |
+| --- | --- |
+| `GET /memories` | List current memory revisions |
+| `GET /graph` | Return memory graph and recent audit events |
+| `GET /plan/{root_id}` | Explain risk-ranked repair candidates |
+| `POST /ask` | Ask the transparent memory agent |
+| `POST /repair` | Correct a root memory and repair downstream effects |
 
-## Research direction
+## Why It Matters
 
-This repo is ready to grow into an LNCS-style paper around:
+Persistent AI agents will increasingly maintain user state across months or years. A memory correction is not isolated: the old fact may already have shaped later decisions. Memory Aftershock turns that problem into a measurable system:
+
+1. retrieve evidence from real long-memory conversations,
+2. model downstream dependency under incomplete provenance,
+3. spend a limited repair budget intelligently,
+4. preserve unrelated memories,
+5. leave an auditable trace.
+
+## Research Paper Direction
+
+Working title:
 
 **Memory Aftershock: Budgeted Repair of Agent Memories under Incomplete Provenance**
 
-The strongest next experiments are adding LLM-based verification, real tool traces, and a comparison against memory editing or rollback baselines.
+The next paper-level extensions are:
+
+- add LLM-based verification instead of the synthetic oracle,
+- evaluate on real agent tool traces,
+- compare against memory editing, rollback, and full re-indexing baselines,
+- add human preference studies around when to quarantine vs. auto-rewrite memories.
+
+## Limitations
+
+This repository is intentionally honest about what is real and what is controlled. LongMemEval measures retrieval over real benchmark data. The repair benchmark uses synthetic dependency truth so algorithms can be compared precisely. The synthetic oracle should not be described as a production truth verifier.
+
+## License
+
+MIT
